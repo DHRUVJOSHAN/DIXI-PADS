@@ -1,0 +1,84 @@
+name: Build DIXE MIDI Android APK
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Run unit tests
+        working-directory: android
+        run: gradle testDebugUnitTest
+
+      - name: Build Debug APK
+        working-directory: android
+        run: gradle assembleDebug
+
+      - name: Build Release APK
+        working-directory: android
+        run: gradle assembleRelease
+
+      - name: Sign Release APK
+        working-directory: android
+        run: |
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME/build-tools/"* | sort -V | tail -n 1)
+          keytool -genkeypair -v \
+            -keystore ci-release.jks \
+            -storepass dixemidi123 \
+            -keypass dixemidi123 \
+            -alias dixe \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=DIXE MIDI,O=DIXE,C=US"
+          "$BUILD_TOOLS_DIR/zipalign" -v -p 4 \
+            app/build/outputs/apk/release/app-release-unsigned.apk \
+            app/build/outputs/apk/release/app-release-aligned.apk
+          "$BUILD_TOOLS_DIR/apksigner" sign \
+            --ks ci-release.jks \
+            --ks-pass pass:dixemidi123 \
+            --key-pass pass:dixemidi123 \
+            --ks-key-alias dixe \
+            --out app/build/outputs/apk/release/dixe-midi-release.apk \
+            app/build/outputs/apk/release/app-release-aligned.apk
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/dixe-midi-debug.apk
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dixe-midi-debug-apk
+          path: android/app/build/outputs/apk/debug/dixe-midi-debug.apk
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dixe-midi-release-apk
+          path: android/app/build/outputs/apk/release/dixe-midi-release.apk
+
+
+
+
+
+
+
+
+  
