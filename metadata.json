@@ -1,0 +1,6 @@
+{
+  "name": "DIXI PADS",
+  "description": "Dedicated zero-audio-engine landscape touchscreen USB MIDI 12-pad drum controller.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
